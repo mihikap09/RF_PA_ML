@@ -1,17 +1,3 @@
-"""Step 3: comparison figures for the PA-modelling project (DPA_200MHz).
-
-Run from the repo root AFTER fit_baselines/baselines_v2.py and train_mlp.py:
-    python make_figures.py
-
-Makes (in figures/):
-  fig_am_am.png         AM/AM: measured vs memory polynomial vs MLP (M=5)
-  fig_am_pm.png         AM/PM: same comparison
-  fig_spectrum.png      Output power spectrum: measured vs models
-  fig_nmse_vs_params.png  accuracy vs model size (all models)
-  fig_nmse_vs_depth.png   NMSE vs memory depth (polynomial M=1..9, MLP from CSV)
-The MLP (M=5) is retrained here exactly as in train_mlp.py (same seeds, best seed by
-validation). If PyTorch is missing, the MLP curves are skipped with a warning.
-"""
 from pathlib import Path
 import numpy as np
 import pandas as pd
@@ -23,10 +9,10 @@ root = Path(__file__).resolve().parent
 (root / "figures").mkdir(exist_ok=True)
 
 ORDERS = (1, 3, 5)
-FS, BW = 800e6, 200e6          # same ASSUMPTION as the other scripts
+FS, BW = 800e6, 200e6          
 MP_DEPTHS = (1, 3, 5, 7, 9)
-BEST_M = 5                     # depth shown in the AM/AM, AM/PM and spectrum figures
-DROP = max(MP_DEPTHS) - 1      # common samples dropped so every model is scored identically
+BEST_M = 5                    
+DROP = max(MP_DEPTHS) - 1  
 
 df = pd.read_csv(root / "datasets" / "dpa_200.csv")
 x = df["I_in"].to_numpy() + 1j * df["Q_in"].to_numpy()
@@ -62,16 +48,16 @@ def psd(sig, seg=2048):
     return np.fft.fftshift(np.fft.fftfreq(seg, 1 / FS)) / 1e6, p   # MHz
 
 
-# ------------------------------------------------ models on identical test samples
+
 x_c = x_te[DROP:]
 y_c = y_te[DROP:]
-models = {}                                   # name -> predicted output
+models = {}                               
 mp_pred, mp_params = mp_predict_test(BEST_M)
 models[f"Memory poly (M={BEST_M})"] = mp_pred
 
 mlp_ok = True
 try:
-    import train_mlp as T           # same split/scaling/model as step 2 (main block is guarded)
+    import train_mlp as T          
     best = None
     for seed in T.SEEDS:
         model, n_params, best_val, _ = T.train_one(BEST_M, seed)
@@ -79,7 +65,7 @@ try:
             best = (best_val, model, n_params)
     _, model, mlp_params = best
     X, _, cur = T.make_set(x_te, y_te, BEST_M)
-    mlp_full = T.predict(model, X, cur)                     # starts at sample BEST_M-1
+    mlp_full = T.predict(model, X, cur)                    
     models[f"MLP (M={BEST_M})"] = mlp_full[DROP - (BEST_M - 1):]
 except ImportError as e:
     mlp_ok = False
@@ -89,9 +75,9 @@ colors = {f"Memory poly (M={BEST_M})": "tab:blue", f"MLP (M={BEST_M})": "tab:red
 for k, v in models.items():
     print(f"{k}: NMSE on common test samples = {nmse_db(y_c, v):.2f} dB")
 
-# ------------------------------------------------ AM/AM and AM/PM
+
 amp_in = np.abs(x_c)
-idx = np.arange(0, len(x_c), 2)                # light thinning for readability
+idx = np.arange(0, len(x_c), 2)             
 for tag, fn, ylabel in (
         ("am_am", lambda s, xi: np.abs(s), "|output| (normalised units)"),
         ("am_pm", lambda s, xi: np.degrees(np.angle(s * np.conj(xi))), "phase shift (deg)")):
@@ -108,7 +94,7 @@ for tag, fn, ylabel in (
     fig.savefig(root / "figures" / f"fig_{tag}.png", dpi=200)
     plt.close(fig)
 
-# ------------------------------------------------ spectrum
+
 f, p_meas = psd(y_c)
 norm = p_meas.max()
 plt.figure(figsize=(7.5, 4.5))
@@ -121,7 +107,7 @@ plt.title("Output spectrum (dotted = signal band edges)  [assumes fs = 800 MHz]"
 plt.grid(alpha=0.3); plt.legend(); plt.tight_layout()
 plt.savefig(root / "figures" / "fig_spectrum.png", dpi=200); plt.close()
 
-# ------------------------------------------------ accuracy vs size (from result CSVs)
+
 res = root / "results" / "all_models_comparison.csv"
 if res.exists():
     t = pd.read_csv(res).dropna(subset=["Test_NMSE_dB"])
@@ -141,7 +127,7 @@ if res.exists():
 else:
     print("results/all_models_comparison.csv not found -> skipped fig_nmse_vs_params.png")
 
-# ------------------------------------------------ NMSE vs memory depth
+
 mp_curve = []
 for M in MP_DEPTHS:
     pred, _ = mp_predict_test(M)

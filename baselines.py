@@ -1,19 +1,14 @@
-"""Baseline PA models on DPA_200MHz: linear, memoryless polynomial, memory polynomial.
-
-Model selection (memory depth) uses the validation split only;
-the final comparison is reported on the test split, on a common set of samples.
-"""
 from pathlib import Path
 import numpy as np
 import pandas as pd
 
-# ---------------------------------------------------------------- config
+
 ORDERS = (1, 3, 5)
 DEPTHS = (1, 3, 5)
-SELECTED_M = 3          # overwritten below by best validation depth
-FS = 800e6              # ASSUMPTION: sampling rate for the 200 MHz signal (OpenDPD convention). Confirm.
-BW = 200e6              # signal bandwidth
-# ----------------------------------------------------------------------
+SELECTED_M = 3         
+FS = 800e6
+BW = 200e6 
+
 
 root = Path(__file__).resolve().parent
 df = pd.read_csv(root / "datasets" / "dpa_200.csv")
@@ -21,7 +16,7 @@ x = df["I_in"].to_numpy() + 1j * df["Q_in"].to_numpy()
 y = df["I_out"].to_numpy() + 1j * df["Q_out"].to_numpy()
 assert len(x) == len(y) == 38400
 
-# OpenDPD Studio contiguous split (60/20/20)
+
 sl_train, sl_val, sl_test = slice(0, 23040), slice(23040, 30720), slice(30720, None)
 x_tr, y_tr = x[sl_train], y[sl_train]
 x_va, y_va = x[sl_val], y[sl_val]
@@ -66,15 +61,13 @@ def fit_mp(sig, tgt, memory):
 def predict_mp(sig, coeff, memory):
     return mp_features(sig, memory) @ coeff
 
-
-# --------------------------------------------- memory-depth selection (validation)
 max_m = max(DEPTHS)
 rows = []
 coeffs = {}
 for M in DEPTHS:
     c = fit_mp(x_tr, y_tr, M)
     coeffs[M] = c
-    # score on the SAME validation samples for every depth (drop first max_m-1)
+
     pred = predict_mp(x_va, c, M)[max_m - M:]
     val = nmse_db(y_va[max_m - 1:], pred)
     rows.append({"Depth_M": M, "Coefficients": len(c), "Val_NMSE_dB": val})
@@ -83,7 +76,7 @@ best_M = int(depth_df.loc[depth_df["Val_NMSE_dB"].idxmin(), "Depth_M"])
 print("MEMORY DEPTH (validation)\n", depth_df.to_string(index=False))
 print("Selected depth:", best_M)
 
-# --------------------------------------------- final test comparison (common samples)
+
 y_t = y_te[max_m - 1:]
 G = np.vdot(x_tr, y_tr) / np.vdot(x_tr, x_tr)
 results = [("Linear", 1, G * x_te[max_m - 1:])]

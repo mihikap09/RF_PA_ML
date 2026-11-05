@@ -1,11 +1,3 @@
-"""Step 2: time-delay MLP model of the DPA_200MHz power amplifier.
-
-Same split, same NMSE/ACPR definitions and same evaluation samples as fit_baselines.py,
-so the numbers can be put in one table.
-
-Run from the repo root:   python train_mlp.py
-Outputs: results/mlp_comparison.csv, results/all_models_comparison.csv, figures/mlp_loss_M*.png
-"""
 from pathlib import Path
 import copy
 import numpy as np
@@ -13,17 +5,15 @@ import pandas as pd
 import torch
 import torch.nn as nn
 
-# ---------------------------------------------------------------- config
-DEPTHS = (1, 3, 5)       # memory depths (number of input samples in the window)
-HIDDEN = 32              # neurons per hidden layer
+DEPTHS = (1, 3, 5)       
+HIDDEN = 32         
 EPOCHS = 200
-PATIENCE = 20            # early-stopping patience (epochs without val improvement)
+PATIENCE = 20           
 BATCH = 256
 LR = 1e-3
 SEEDS = (0, 1, 2)
-FS = 800e6               # ASSUMPTION (same as fit_baselines.py) - confirm against dataset docs
+FS = 800e6               
 BW = 200e6
-# ----------------------------------------------------------------------
 
 root = Path(__file__).resolve().parent
 df = pd.read_csv(root / "datasets" / "dpa_200.csv")
@@ -55,11 +45,11 @@ def acpr_db(sig, fs=FS, bw=BW):
     return 10 * np.log10(max(lo, hi) / main)
 
 
-# ------------------------------------------------------------ data prep
-# Scale so the network sees values around 1. Inverted before every metric.
+
+
 SX = np.max(np.abs(x_tr))
 SY = np.max(np.abs(y_tr))
-# Linear gain (in scaled units) - the network learns only what the linear part misses.
+
 xs_tr, ys_tr = x_tr / SX, y_tr / SY
 G = np.vdot(xs_tr, ys_tr) / np.vdot(xs_tr, xs_tr)
 
@@ -77,8 +67,8 @@ def window_features(sig_scaled, M):
 
 def make_set(x_split, y_split, M):
     X = window_features(x_split / SX, M)
-    cur = (x_split / SX)[M - 1:]                    # current sample, for the linear part
-    resid = y_split[M - 1:] / SY - G * cur          # what the network must learn
+    cur = (x_split / SX)[M - 1:]                    
+    resid = y_split[M - 1:] / SY - G * cur       
     T = np.column_stack([resid.real, resid.imag]).astype(np.float32)
     return X, T, cur
 
@@ -177,7 +167,7 @@ if __name__ == "__main__":
                   f"val NMSE={ev['val'][0]:.2f} dB  test NMSE={ev['test'][0]:.2f} dB  "
                   f"test ACPR={ev['test'][1]:.2f} dB  epochs={len(hist['val'])}")
         test = np.array([r["test_nmse"] for r in runs])
-        best = min(runs, key=lambda r: r["val_nmse"])     # choose seed by VALIDATION only
+        best = min(runs, key=lambda r: r["val_nmse"])     
         rows.append({
             "Model": f"MLP (M={M})", "Coefficients": n_params,
             "Test_NMSE_dB": best["test_nmse"],

@@ -55,7 +55,7 @@ G = np.vdot(xs_tr, ys_tr) / np.vdot(xs_tr, xs_tr)
 
 
 def window_features(sig_scaled, M):
-    """Row k <-> sample index k+M-1 (same alignment as mp_features in fit_baselines.py).
+    """Row k <-> sample index k+M-1 (same alignment as mp_features in baselines.py).
     Columns: for delay m = 0..M-1 -> [I, Q, |x|] of sample (k+M-1-m)."""
     N = len(sig_scaled)
     cols = []

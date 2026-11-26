@@ -53,6 +53,20 @@ reproducible without an external download. No other data is used.
 
 ## 3. Reproducing the results
 
+### Quickest route — one command
+
+```bash
+chmod +x reproduce.sh
+./reproduce.sh                # full run, reproduces the reported numbers
+./reproduce.sh --quick        # fast sanity check, reduced epochs
+./reproduce.sh --install      # pip install requirements first, then full run
+```
+
+The script runs all seven stages in order, checks the environment, verifies the
+checkpoint was written, and prints the headline numbers at the end.
+
+### Or step by step
+
 Run from the repository root, in this order. Each step writes into `results/`
 and `figures/`.
 
